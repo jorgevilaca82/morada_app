@@ -22,12 +22,15 @@ export class Order {
     userId: number
 
     @Column({type: "varchar", length: 20})
-    status: "pending" | "completed" | "failed" = "pending"
+    status: "RECEIVED" | "PROCESSING" | "COMPLETED" | "FAILED_RETRYABLE" | "FAILED_PERMANENT" | "UNKNOWN" = "RECEIVED"
 
     @Column({type: "timestamp", default: () => "CURRENT_TIMESTAMP"})
     createdAt: Date = new Date()
 
     @Column({type: "timestamp", default: () => "CURRENT_TIMESTAMP"})
     updatedAt: Date = new Date()
+
+    @Column({type: "timestamp", nullable: true})
+    syncedAt: Date | null = null
 
 }

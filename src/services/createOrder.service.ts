@@ -42,7 +42,7 @@ export default async function createOrderService(orderData: CreateOrderData): Pr
             order.customerName = orderData.customerName;
             order.totalAmount = orderData.totalAmount;
             order.userId = orderData.userId;
-            order.status = "pending";
+            // order.status = "pending";
 
             const result = await orderRepository.save(order);
 
