@@ -31,12 +31,14 @@ function handleError(error: unknown, order: Order): void {
     if (error instanceof Error) {
         if (error.name === "NetworkError" || error.name === "TimeoutError") {
             orderRepository.merge(order, { status: "FAILED_RETRYABLE" });
+            orderRepository.save(order);
             logger.warn(
                 { err: error, orderId: order.orderNumber },
                 `Retryable error occurred while synchronizing order ${order.orderNumber} with ERP.`,
             );
         } else {
             orderRepository.merge(order, { status: "FAILED_PERMANENT" });
+            orderRepository.save(order);
             logger.error(
                 { err: error, orderId: order.orderNumber },
                 `Permanent error occurred while synchronizing order ${order.orderNumber} with ERP.`,
@@ -44,6 +46,7 @@ function handleError(error: unknown, order: Order): void {
         }
     } else {
         orderRepository.merge(order, { status: "FAILED_PERMANENT" });
+        orderRepository.save(order);
         logger.error(
             { err: error, orderId: order.orderNumber },
             `Unknown error occurred while synchronizing order ${order.orderNumber} with ERP.`,

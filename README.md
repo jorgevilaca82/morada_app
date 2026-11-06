@@ -105,3 +105,53 @@ O que faz:
 7. Encerra a conexão e o processo
 
 Assim a API só recebe o pedido; a integração com o ERP fica no worker periódico, com retries controlados pelo status.
+
+## Possíveis melhorias futuras
+
+### Robustez
+
+* **Fila de outbox / mensageria** 
+Em vez de o cron varrer a tabela, persistir um evento (order.created) e processar via fila (Redis/BullMQ, SQS, RabbitMQ). Ganha desacoplamento, retry com backoff e evita duas
+instâncias do cron processarem o mesmo pedido.
+
+* **Claim atômico no sync**
+Hoje o job lista e processa em série; dois crons paralelos podem sincronizar o mesmo pedido. Usar `SELECT … FOR UPDATE SKIP LOCKED` (ou status SYNCING + UPDATE … WHERE status IN (…) 
+RETURNING *) para “pegar” um lote com exclusão mútua.
+
+* **Backoff, tentativas e dead letter**
+Campos attemptCount, nextRetryAt, lastError. Retryable com intervalo crescente; após N falhas → FAILED_PERMANENT ou fila DLQ para análise manual.
+
+* **Idempotência também no ERP**
+Enviar a mesma idempotencyKey/orderNumber ao ERP e tratar “já existe” como sucesso. Evita duplicar pedido externo se o timeout ocorrer depois do commit no ERP.
+
+* **Timeout real no adapter**
+O modo timeout só atrasa e lança erro; falta AbortController/deadline real e cancelamento da chamada HTTP.
+
+* **Migrations em vez de synchronize: true**
+Schema controlado, reversível e seguro em produção.
+
+* **Observabilidade**
+Métricas (taxa de sync, idade da fila, 4xx/5xx), tracing (OpenTelemetry) e alertas quando FAILED_RETRYABLE ou backlog crescer.
+
+* **Contrato de payload na idempotência**
+Hoje a mesma chave com body diferente devolve o pedido antigo. Guardar hash do body e rejeitar conflito (409) se a chave for reusada com dados distintos.
+
+### Performance
+
+* **Processamento em paralelo com limite**
+Substituir o for sequencial por pool (p-limit / workers) — ex.: 5–10 syncs simultâneos — sem saturar o ERP.
+
+* **Lotes e índices**
+Índice composto (status, syncedAt, nextRetryAt); buscar com LIMIT/ORDER BY createdAt em vez de carregar tudo.
+
+* **Paginação em GET /orders**
+Cursor/offset + filtros por status/data; evitar listar a tabela inteira.
+
+* **Connection pooling**
+Pool TypeORM/PgBouncer dimensionado; healthchecks no Compose (depends_on com condição).
+
+* **Cache só onde fizer sentido**
+Status de pedido de leitura frequente (Redis) com invalidação no sync — não cachear criação.
+
+* **Separar API e worker**
+Processos/containers distintos: a API não compete com o sync por CPU/conexões; escala independente.
