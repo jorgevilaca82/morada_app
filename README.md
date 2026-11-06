@@ -53,7 +53,7 @@ curl -X POST http://localhost:3000/orders \
 }'
 ```
 
-- `201` com o pedido (`status` inicial: `RECEIVED)
+- `201` com o pedido (`status` inicial: `RECEIVED`)
 - Mesma chave → mesmo pedido (idempotente, inclusive sob concorrência)
 - Sem header ou body inválido → 400
 
@@ -72,7 +72,7 @@ curl http://localhost:3000/orders/3/status
 ```
 
 - `200` { "status": `"RECEIVED"` | `"PROCESSING"` | ... }
-• `404` se não existir
+- `404` se não existir
 
 `GET /` — health/hello
 
